@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
@@ -5,7 +6,7 @@ const MongoClient = require('mongodb').MongoClient
 
 var db, collection;
 
-const url = "mongodb+srv://demo:demo@cluster0-q2ojb.mongodb.net/test?retryWrites=true";
+const url = process.env.MONGODB_URI
 const dbName = "demo";
 
 app.listen(3000, () => {
@@ -41,14 +42,36 @@ app.post('/messages', (req, res) => {
 app.put('/messages', (req, res) => {
   db.collection('messages')
   .findOneAndUpdate({name: req.body.name, msg: req.body.msg}, {
-    $set: {
+    /* $set: {
       thumbUp:req.body.thumbUp + 1
+    } */
+
+   /* NOTE: Replaced with $inc, which is MongoDB's increment operator: it tells the database to increase the existing number by one, instead of relying on a value sent from the browser. */
+    $inc: {
+      thumbUp: 1
     }
   }, {
     sort: {_id: -1},
-    upsert: true
+    // upsert: true
+    upsert: false
   }, (err, result) => {
     if (err) return res.send(err)
+    res.send(result)
+  })
+})
+
+/* This creates a new Express route that increases the downvote count of the matching message. */
+app.put('/messages/down', (req, res) => {
+  db.collection('messages')
+  .findOneAndUpdate({name: req.body.name, msg: req.body.msg}, {
+    $inc: {
+      thumbDown: 1
+    }
+  }, {
+    sort: {_id: -1},
+    upsert: false
+  }, (err, result) => {
+    if (err) return res.status(500).send(err)
     res.send(result)
   })
 })
